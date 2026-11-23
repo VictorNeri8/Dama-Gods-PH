@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dama – Filipino Checkers</title>
+<style>
+  :root{
+    --bg:#0f2229;
+    --panel:#17323b;
+    --line:#2a4a55;
+    --text:#f1ece2;
+    --muted:#93aab1;
+    --sun:#f2b632;
+    --sq-light:#ead9b5;
+    --sq-dark:#5a3826;
+    --frame:#33200f;
+    --danger:#ff7b6b;
+    --good:#7fd6a0;
+  }
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  html,body{margin:0;min-height:100%}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    display:flex;justify-content:center;
+    padding:20px 14px 40px;
+  }
+  #app{width:100%;max-width:640px}
+  h1{
+    font:700 2rem/1.1 Georgia,"Times New Roman",serif;
+    margin:6px 0 4px;letter-spacing:.01em;
+  }
+  .sub{color:var(--muted);margin:0 0 22px}
+  .card{
+    background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;padding:18px;margin-bottom:14px;
+  }
+  .card h2{font-size:1.05rem;margin:0 0 4px}
+  .card p{margin:0 0 12px;color:var(--muted);font-size:.93rem}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  input[type=text]{
+    flex:1;min-width:120px;
+    background:#0f2229;color:var(--text);
+    border:1px solid var(--line);border-radius:8px;
+    padding:10px 12px;font:inherit;letter-spacing:.2em;text-transform:uppercase;
+  }
+  button{
+    font:inherit;font-weight:600;cursor:pointer;
+    background:var(--sun);color:#2a1d00;
+    border:0;border-radius:8px;padding:10px 16px;
+  }
+  button.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+  button:hover{filter:brightness(1.08)}
+  button:focus-visible,input:focus-visible{outline:3px solid #fff;outline-offset:2px}
+  .msg{min-height:1.4em;margin:6px 0 0;color:var(--muted);font-size:.93rem}
+  .msg.err{color:var(--danger)}
+  .code{
+    font:700 2.4rem/1 Georgia,serif;letter-spacing:.25em;
+    color:var(--sun);margin:8px 0 12px;
+  }
+  details{margin-top:16px;color:var(--muted);font-size:.93rem}
+  summary{cursor:pointer;color:var(--text);font-weight:600}
+  details ul{padding-left:20px;margin:8px 0}
+  details li{margin:4px 0}
+
+  /* ---------- game ---------- */
+  .bar{
+    display:flex;align-items:center;justify-content:space-between;
+    width:min(100%,560px);margin:0 auto 8px;
+    font-weight:600;
+  }
+  .bar .tag{display:flex;align-items:center;gap:8px}
+  .bar .dot{
+    width:12px;height:12px;border-radius:50%;
+    border:2px solid var(--muted);background:transparent;
+  }
+  .bar.active .dot{background:var(--sun);border-color:var(--sun)}
+  .bar .count{color:var(--muted);font-weight:500;font-size:.93rem}
+
+  .board{
+    display:grid;grid-template-columns:repeat(8,1fr);
+    width:min(100%,560px,calc(100vh - 230px));
+    min-width:280px;
+    aspect-ratio:1;margin:0 auto;
+    border:8px solid var(--frame);border-radius:6px;
+    box-shadow:0 10px 30px rgba(0,0,0,.45);
+    user-select:none;-webkit-user-select:none;
+  }
+  .cell{
+    position:relative;display:flex;align-items:center;justify-content:center;
+    container-type:size;
+  }
+  .cell.l{background-color:var(--sq-light)}
+  .cell.d{background-color:var(--sq-dark)}
+  .cell.last{background-image:linear-gradient(rgba(242,182,50,.38),rgba(242,182,50,.38))}
+  .cell.sel{box-shadow:inset 0 0 0 4px var(--sun)}
+  .cell.target{cursor:pointer}
+  .cell.target::after{
+    content:"";width:30%;height:30%;border-radius:50%;
+    background:rgba(242,182,50,.92);
+    box-shadow:0 0 0 4px rgba(242,182,50,.28);
+  }
+  .piece{
+    width:80%;height:80%;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:46cqw;line-height:1;
+  }
+  .piece.white{
+    background:radial-gradient(circle at 35% 30%,#fff 0,#f3ede1 40%,#c9bda6 100%);
+    box-shadow:0 3px 0 #9d9078,0 5px 8px rgba(0,0,0,.45);
+    color:#a8741a;
+  }
+  .piece.black{
+    background:radial-gradient(circle at 35% 30%,#5d5650 0,#26211e 45%,#0b0908 100%);
+    box-shadow:0 3px 0 #000,0 5px 8px rgba(0,0,0,.55);
+    color:var(--sun);
+  }
+  .piece.king::after{content:"♛"}
+  .piece.dead{opacity:.3}
+  .cell.movable{cursor:pointer}
+  .cell.movable .piece{outline:3px solid var(--sun);outline-offset:1px}
+  .cell.last .piece{animation:settle .22s ease-out}
+  @keyframes settle{from{transform:scale(1.15)}to{transform:scale(1)}}
+  @media (prefers-reduced-motion:reduce){.cell.last .piece{animation:none}}
+
+  .status{
+    width:min(100%,560px);margin:12px auto 8px;
+    text-align:center;font-size:1.05rem;font-weight:600;min-height:1.6em;
+  }
+  .status.warn{color:var(--sun)}
+  .status.end{color:var(--good)}
+  .controls{
+    display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:6px;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ===================== LOBBY ===================== -->
+  <section id="lobby">
+    <h1>Dama</h1>
+    <p class="sub">Filipino checkers. Play a friend on another device, no account needed.</p>
+
+    <div class="card" id="hostCard">
+      <h2>Create a room</h2>
+      <p>You play White and move first. Send your friend the room code or link.</p>
+      <div id="hostIdle"><button id="btnHost">Create room</button></div>
+      <div id="hostWait" hidden>
+        <div class="code" id="roomCode">-----</div>
+        <div class="row">
+          <button id="btnCopyLink">Copy invite link</button>
+          <button id="btnCopyCode" class="ghost">Copy code</button>
+          <button id="btnCancelHost" class="ghost">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Join a room</h2>
+      <p>Enter the 5-letter code your friend gave you.</p>
+      <div class="row">
+        <input type="text" id="joinCode" maxlength="5" placeholder="CODE" autocomplete="off" aria-label="Room code">
+        <button id="btnJoin">Join</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Same device</h2>
+      <p>Take turns on one screen.</p>
+      <button id="btnLocal" class="ghost">Play locally</button>
+    </div>
+
+    <p class="msg" id="lobbyMsg" role="status"></p>
+
+    <details>
+      <summary>Rules (Philippine dama)</summary>
+      <ul>
+        <li>8×8 board, 12 pieces each, played on the dark squares. White moves first.</li>
+        <li>A pawn moves one square diagonally forward.</li>
+        <li>A pawn captures by jumping an adjacent enemy piece, <b>forward or backward</b>.</li>
+        <li>A pawn that ends its move on the far row becomes a <b>dama</b> (♛).</li>
+        <li>A dama moves like a bishop: any distance along a diagonal. It captures from a distance, jumping one enemy piece and landing on any empty square past it.</li>
+        <li>Capturing is <b>compulsory</b>. You may pick any capture, but you must finish the chain of jumps. A piece can't be jumped twice.</li>
+        <li>You win when the opponent has no pieces or no legal move.</li>
+      </ul>
+    </details>
+  </section>
+
+  <!-- ===================== GAME ===================== -->
+  <section id="game" hidden>
+    <div class="bar" id="barTop"><span class="tag"><span class="dot"></span><span class="name"></span></span><span class="count"></span></div>
+    <div class="board" id="board" role="grid" aria-label="Checkers board"></div>
+    <div class="bar" id="barBottom" style="margin-top:8px"><span class="tag"><span class="dot"></span><span class="name"></span></span><span class="count"></span></div>
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+    <div class="controls">
+      <button id="btnResign" class="ghost">Resign</button>
+      <button id="btnRematch" hidden>Rematch</button>
+      <button id="btnNewLocal" hidden>New game</button>
+      <button id="btnLeave" class="ghost">Leave</button>
+    </div>
+  </section>
+
+</div>
+
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>window.Peer||document.write('<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"><\/script>')</script>
+<script>
+/* =====================================================================
+   ENGINE START  (pure rules, no DOM)
+   ===================================================================== */
+const WHITE='white', BLACK='black';
+const opp = c => c===WHITE ? BLACK : WHITE;
+const eq  = (a,b) => a[0]===b[0] && a[1]===b[1];
+const key = (r,c) => r*8+c;
+const inb = (r,c) => r>=0 && r<8 && c>=0 && c<8;
+const DIRS = [[-1,-1],[-1,1],[1,-1],[1,1]];
+
+function initialBoard(){
+  const b = Array.from({length:8},()=>Array(8).fill(null));
+  for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+    if((r+c)%2!==1) continue;
+    if(r<3) b[r][c]={color:BLACK,king:false};
+    else if(r>4) b[r][c]={color:WHITE,king:false};
+  }
+  return b;
+}
+
+/* single jumps available from (r,c) for `piece`; `origin` counts as empty
+   because the moving piece has left it; `captured` pieces stay on the board
+   (they block) but can't be jumped again. */
+function jumpsFrom(b,r,c,piece,captured,origin){
+  const res=[];
+  const empty=(rr,cc)=>!b[rr][cc] || (rr===origin[0]&&cc===origin[1]);
+  for(const [dr,dc] of DIRS){
+    let rr=r+dr, cc=c+dc;
+    if(piece.king){ while(inb(rr,cc)&&empty(rr,cc)){rr+=dr;cc+=dc;} }
+    if(!inb(rr,cc)) continue;
+    const t=b[rr][cc];
+    if(!t || (rr===origin[0]&&cc===origin[1])) continue;
+    if(t.color===piece.color || captured.has(key(rr,cc))) continue;
+    let lr=rr+dr, lc=cc+dc;
+    while(inb(lr,lc)&&empty(lr,lc)){
+      res.push({to:[lr,lc],cap:[rr,cc]});
+      if(!piece.king) break;
+      lr+=dr; lc+=dc;
+    }
+  }
+  return res;
+}
+
+/* all maximal capture chains for the piece on (r,c) */
+function captureChains(b,r,c){
+  const piece=b[r][c], out=[];
+  (function dfs(cr,cc,captured,path){
+    const js=jumpsFrom(b,cr,cc,piece,captured,[r,c]);
+    if(!js.length){ if(path.length) out.push(path.slice()); return; }
+    for(const j of js){
+      const nc=new Set(captured); nc.add(key(j.cap[0],j.cap[1]));
+      path.push(j); dfs(j.to[0],j.to[1],nc,path); path.pop();
+    }
+  })(r,c,new Set(),[]);
+  return out;
+}
+
+function simpleMovesFrom(b,r,c){
+  const p=b[r][c], out=[];
+  for(const [dr,dc] of DIRS){
+    if(!p.king){
+      if(dr!==(p.color===WHITE?-1:1)) continue;
+      const nr=r+dr,nc=c+dc;
+      if(inb(nr,nc)&&!b[nr][nc]) out.push({from:[r,c],steps:[{to:[nr,nc],cap:null}]});
+    }else{
+      let nr=r+dr,nc=c+dc;
+      while(inb(nr,nc)&&!b[nr][nc]){
+        out.push({from:[r,c],steps:[{to:[nr,nc],cap:null}]});
+        nr+=dr;nc+=dc;
+      }
+    }
+  }
+  return out;
+}
+
+/* legal moves: if any capture exists, only captures are legal */
+function allMoves(b,color){
+  const caps=[];
+  for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+    const p=b[r][c];
+    if(p&&p.color===color) for(const ch of captureChains(b,r,c)) caps.push({from:[r,c],steps:ch});
+  }
+  if(caps.length) return caps;
+  const simple=[];
+  for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+    const p=b[r][c];
+    if(p&&p.color===color) simple.push(...simpleMovesFrom(b,r,c));
+  }
+  return simple;
+}
+
+function applyMove(b,move){
+  const [fr,fc]=move.from;
+  const p=b[fr][fc];
+  b[fr][fc]=null;
+  for(const s of move.steps) if(s.cap) b[s.cap[0]][s.cap[1]]=null;
+  const last=move.steps[move.steps.length-1].to;
+  b[last[0]][last[1]]=p;
+  if(last[0]===(p.color===WHITE?0:7)) p.king=true;
+}
+/* ENGINE END */
+
+/* =====================================================================
+   APP STATE
+   ===================================================================== */
+const $ = s => document.querySelector(s);
+const S = { mode:null, myColor:WHITE, role:null, peer:null, conn:null, rematch:{me:false,them:false}, gone:false };
+let G = null;
+
+function startGame(){
+  S.rematch={me:false,them:false};
+  S.gone=false;
+  G={
+    board:initialBoard(), turn:WHITE, over:false, result:null,
+    last:[], pending:null, sel:null, legal:[]
+  };
+  G.legal=allMoves(G.board,G.turn);
+  showScreen('game');
+  render();
+}
+
+const myTurn = () => G && !G.over && (S.mode==='local' || G.turn===S.myColor);
+
+function prefixMatch(m,pd){
+  return eq(m.from,pd.from) && pd.steps.every((s,i)=>m.steps[i]&&eq(m.steps[i].to,s.to));
+}
+
+function targets(){
+  if(!myTurn()) return [];
+  if(G.pending){
+    const n=G.pending.steps.length;
+    return G.legal.filter(m=>prefixMatch(m,G.pending)&&m.steps.length>n).map(m=>m.steps[n].to);
+  }
+  if(G.sel) return G.legal.filter(m=>eq(m.from,G.sel)).map(m=>m.steps[0].to);
+  return [];
+}
+
+function onCell(r,c){
+  if(!myTurn()) return;
+  if(targets().some(t=>eq(t,[r,c]))){ stepTo([r,c]); return; }
+  if(G.pending) return;                       // must finish the chain
+  const p=G.board[r][c];
+  if(p && p.color===G.turn && G.legal.some(m=>eq(m.from,[r,c]))) G.sel=[r,c];
+  else G.sel=null;
+  render();
+}
+
+function stepTo(to){
+  if(G.pending){
+    const n=G.pending.steps.length;
+    const m=G.legal.find(m=>prefixMatch(m,G.pending)&&m.steps.length>n&&eq(m.steps[n].to,to));
+    G.pending.steps.push(m.steps[n]);
+    G.pending.cur=to;
+  }else{
+    const m=G.legal.find(m=>eq(m.from,G.sel)&&eq(m.steps[0].to,to));
+    G.pending={from:G.sel,cur:to,steps:[m.steps[0]]};
+    G.sel=null;
+  }
+  const n=G.pending.steps.length;
+  const rest=G.legal.filter(m=>prefixMatch(m,G.pending));
+  if(rest.some(m=>m.steps.length>n)){ render(); return; }   // chain continues
+  commit(rest[0],false);
+}
+
+function commit(move,remote){
+  const mover=G.turn;
+  G.pending=null; G.sel=null;
+  applyMove(G.board,move);
+  G.last=[move.from,...move.steps.map(s=>s.to)];
+  if(!remote && S.mode==='online' && S.conn && S.conn.open){
+    S.conn.send({t:'move',from:move.from,tos:move.steps.map(s=>s.to)});
+  }
+  G.turn=opp(mover);
+  G.legal=allMoves(G.board,G.turn);
+  if(!G.legal.length){
+    G.over=true;
+    const left=G.board.flat().filter(p=>p&&p.color===G.turn).length;
+    G.result={winner:mover, reason:left===0?'captured every piece':'blocked every move'};
+  }
+  render();
+}
+
+function findMove(from,tos){
+  return G.legal.find(m=>eq(m.from,from)&&m.steps.length===tos.length&&m.steps.every((s,i)=>eq(s.to,tos[i])));
+}
+
+/* =====================================================================
+   RENDER
+   ===================================================================== */
+function viewBoard(){
+  const b=G.board.map(row=>row.slice());
+  const dead=new Set();
+  if(G.pending){
+    const pd=G.pending, p=b[pd.from[0]][pd.from[1]];
+    b[pd.from[0]][pd.from[1]]=null;
+    b[pd.cur[0]][pd.cur[1]]=p;
+    pd.steps.forEach(s=>dead.add(key(s.cap[0],s.cap[1])));
+  }
+  return {b,dead};
+}
+
+const label = c => c===WHITE ? 'White' : 'Black';
+
+function render(){
+  if(!G) return;
+  const {b,dead}=viewBoard();
+  const flip = S.mode==='online' && S.myColor===BLACK;
+  const tg=targets();
+  const mustCapture = G.legal.length>0 && !!G.legal[0].steps[0].cap;
+  const movable = (myTurn() && !G.pending) ? G.legal.map(m=>m.from) : [];
+  const boardEl=$('#board');
+  boardEl.innerHTML='';
+  for(let dr=0;dr<8;dr++) for(let dc=0;dc<8;dc++){
+    const r=flip?7-dr:dr, c=flip?7-dc:dc;
+    const cell=document.createElement('div');
+    const dark=(r+c)%2===1;
+    cell.className='cell '+(dark?'d':'l');
+    cell.dataset.r=r; cell.dataset.c=c;
+    if(G.last.some(s=>eq(s,[r,c]))) cell.classList.add('last');
+    if(tg.some(t=>eq(t,[r,c]))) cell.classList.add('target');
+    if((G.sel&&eq(G.sel,[r,c])) || (G.pending&&eq(G.pending.cur,[r,c]))) cell.classList.add('sel');
+    const p=b[r][c];
+    if(p){
+      const el=document.createElement('div');
+      el.className='piece '+p.color+(p.king?' king':'')+(dead.has(key(r,c))?' dead':'');
+      cell.appendChild(el);
+      if(mustCapture && movable.some(f=>eq(f,[r,c]))) cell.classList.add('movable');
+      else if(!mustCapture && movable.some(f=>eq(f,[r,c]))) cell.classList.add('movable');
+    }
+    boardEl.appendChild(cell);
+  }
+
+  // player bars
+  const bottomColor = (S.mode==='online') ? S.myColor : WHITE;
+  const topColor = opp(bottomColor);
+  const count = col => G.board.flat().filter(p=>p&&p.color===col).length;
+  const fill=(el,col)=>{
+    const who = S.mode==='online' ? (col===S.myColor?'You':'Friend') : label(col);
+    el.querySelector('.name').textContent = S.mode==='online' ? who+' ('+label(col)+')' : label(col);
+    el.querySelector('.count').textContent = count(col)+' left';
+    el.classList.toggle('active', !G.over && G.turn===col);
+  };
+  fill($('#barTop'),topColor);
+  fill($('#barBottom'),bottomColor);
+
+  // status
+  const st=$('#status');
+  st.className='status';
+  let text='';
+  if(G.over){
+    st.classList.add('end');
+    if(G.result && G.result.winner){
+      const w=G.result.winner;
+      const who = S.mode==='online' ? (w===S.myColor?'You win':'Your friend wins') : label(w)+' wins';
+      text = who+' – '+G.result.reason+'.';
+    } else text = G.result && G.result.reason || 'Game over.';
+    if(S.rematch.me) text+=' Waiting for your friend to accept the rematch…';
+    else if(S.rematch.them) text+=' Your friend wants a rematch.';
+  }else if(myTurn()){
+    const must = G.legal.length>0 && !!G.legal[0].steps[0].cap;
+    text = S.mode==='online' ? 'Your turn' : label(G.turn)+'’s turn';
+    if(G.pending) { text='Keep jumping – finish the chain'; st.classList.add('warn'); }
+    else if(must){ text+=' – you must capture'; st.classList.add('warn'); }
+  }else{
+    text='Friend’s turn…';
+  }
+  st.textContent=text;
+
+  // buttons
+  $('#btnResign').hidden = G.over || S.mode!=='online';
+  $('#btnRematch').hidden = !(G.over && S.mode==='online' && !S.gone);
+  $('#btnNewLocal').hidden = !(G.over && S.mode==='local');
+}
+
+$('#board').addEventListener('click',e=>{
+  const cell=e.target.closest('.cell');
+  if(cell) onCell(+cell.dataset.r,+cell.dataset.c);
+});
+
+/* =====================================================================
+   SCREENS / LOBBY
+   ===================================================================== */
+function showScreen(name){
+  $('#lobby').hidden = name!=='lobby';
+  $('#game').hidden  = name!=='game';
+}
+function lobbyMsg(text,err){
+  const m=$('#lobbyMsg'); m.textContent=text||''; m.classList.toggle('err',!!err);
+}
+
+function teardown(){
+  try{ if(S.conn) S.conn.close(); }catch(e){}
+  try{ if(S.peer) S.peer.destroy(); }catch(e){}
+  S.conn=null; S.peer=null; S.mode=null; S.role=null; G=null;
+  $('#hostIdle').hidden=false; $('#hostWait').hidden=true;
+}
+
+function leaveToLobby(){
+  teardown();
+  history.replaceState(null,'',location.pathname);
+  showScreen('lobby');
+  lobbyMsg('');
+}
+
+/* ---------- networking (PeerJS) ---------- */
+const ROOM_PREFIX='dama-ph-';
+function genCode(){
+  const a='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  return Array.from({length:5},()=>a[Math.floor(Math.random()*a.length)]).join('');
+}
+
+function hostRoom(){
+  if(typeof Peer==='undefined'){ lobbyMsg('Could not load PeerJS. Check your internet connection and reload.',true); return; }
+  teardown();
+  S.mode='online'; S.role='host';
+  const code=genCode();
+  lobbyMsg('Creating room…');
+  const peer=new Peer(ROOM_PREFIX+code);
+  S.peer=peer;
+  peer.on('open',()=>{
+    $('#roomCode').textContent=code;
+    $('#hostIdle').hidden=true; $('#hostWait').hidden=false;
+    lobbyMsg('Waiting for your friend to join…');
+  });
+  peer.on('connection',conn=>{
+    if(S.conn && S.conn.open){ conn.close(); return; }   // room is full
+    setupConn(conn);
+  });
+  peer.on('error',e=>{
+    if(e.type==='unavailable-id'){ hostRoom(); return; }
+    lobbyMsg('Connection problem: '+e.type,true);
+  });
+  peer.on('disconnected',()=>{ try{ peer.reconnect(); }catch(e){} });
+}
+
+function joinRoom(code){
+  code=(code||'').trim().toUpperCase();
+  if(code.length!==5){ lobbyMsg('Enter the 5-letter room code.',true); return; }
+  if(typeof Peer==='undefined'){ lobbyMsg('Could not load PeerJS. Check your internet connection and reload.',true); return; }
+  teardown();
+  S.mode='online'; S.role='guest';
+  lobbyMsg('Connecting…');
+  const peer=new Peer();
+  S.peer=peer;
+  peer.on('open',()=>{
+    const conn=peer.connect(ROOM_PREFIX+code,{reliable:true});
+    setupConn(conn);
+    setTimeout(()=>{ if(S.conn===conn && !conn.open && $('#game').hidden) lobbyMsg('Still trying… make sure the code is right and your friend is waiting.',true); },9000);
+  });
+  peer.on('error',e=>{
+    if(e.type==='peer-unavailable') lobbyMsg('No room with that code. Check it and try again.',true);
+    else lobbyMsg('Connection problem: '+e.type,true);
+  });
+}
+
+function setupConn(conn){
+  S.conn=conn;
+  conn.on('open',()=>{
+    if(S.role==='host'){
+      S.myColor=WHITE;
+      conn.send({t:'welcome',color:BLACK});
+      lobbyMsg('');
+      startGame();
+    }
+  });
+  conn.on('data',onData);
+  conn.on('close',()=>{
+    if(!G) return;
+    S.gone=true;
+    if(!G.over){ G.over=true; G.result={winner:null,reason:'Your friend disconnected.'}; }
+    render();
+  });
+  conn.on('error',()=>{});
+}
+
+function onData(d){
+  if(!d || typeof d!=='object') return;
+  switch(d.t){
+    case 'welcome':
+      if(S.role!=='guest') return;
+      S.myColor=d.color===WHITE?WHITE:BLACK;
+      lobbyMsg('');
+      startGame();
+      break;
+    case 'newgame':
+      if(S.role!=='guest') return;
+      S.myColor=d.color===WHITE?WHITE:BLACK;
+      startGame();
+      break;
+    case 'move': {
+      if(!G||G.over||G.turn===S.myColor) return;
+      if(!Array.isArray(d.from)||!Array.isArray(d.tos)) return;
+      const m=findMove(d.from,d.tos);
+      if(!m){ $('#status').textContent='Received an illegal move – boards are out of sync.'; return; }
+      commit(m,true);
+      break;
+    }
+    case 'resign':
+      if(!G||G.over) return;
+      G.over=true; G.result={winner:S.myColor,reason:'your friend resigned'};
+      render();
+      break;
+    case 'rematch':
+      S.rematch.them=true; maybeRematch(); if(G) render();
+      break;
+  }
+}
+
+function maybeRematch(){
+  if(S.role==='host' && S.rematch.me && S.rematch.them){
+    S.myColor=opp(S.myColor);
+    S.conn.send({t:'newgame',color:opp(S.myColor)});
+    startGame();
+  }
+}
+
+/* ---------- buttons ---------- */
+$('#btnHost').onclick=hostRoom;
+$('#btnCancelHost').onclick=()=>{ teardown(); lobbyMsg(''); };
+$('#btnJoin').onclick=()=>joinRoom($('#joinCode').value);
+$('#joinCode').addEventListener('keydown',e=>{ if(e.key==='Enter') joinRoom(e.target.value); });
+$('#btnLocal').onclick=()=>{ teardown(); S.mode='local'; S.myColor=WHITE; startGame(); };
+$('#btnNewLocal').onclick=()=>startGame();
+$('#btnLeave').onclick=()=>{
+  if(G && !G.over && S.mode==='online' && !confirm('Leave the game? This counts as a loss.')) return;
+  leaveToLobby();
+};
+$('#btnResign').onclick=()=>{
+  if(!G||G.over||!confirm('Resign this game?')) return;
+  if(S.conn&&S.conn.open) S.conn.send({t:'resign'});
+  G.over=true; G.result={winner:opp(S.myColor),reason:'you resigned'};
+  render();
+};
+$('#btnRematch').onclick=()=>{
+  if(S.rematch.me) return;
+  S.rematch.me=true;
+  if(S.conn&&S.conn.open) S.conn.send({t:'rematch'});
+  maybeRematch(); if(G) render();
+};
+
+function copyText(text,btn){
+  const done=()=>{ const o=btn.textContent; btn.textContent='Copied'; setTimeout(()=>btn.textContent=o,1400); };
+  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(done,()=>prompt('Copy this:',text)); }
+  else prompt('Copy this:',text);
+}
+$('#btnCopyLink').onclick=e=>copyText(location.origin+location.pathname+'?join='+$('#roomCode').textContent,e.currentTarget);
+$('#btnCopyCode').onclick=e=>copyText($('#roomCode').textContent,e.currentTarget);
+
+/* auto-join from invite link  (?join=CODE) */
+(function(){
+  const code=new URLSearchParams(location.search).get('join');
+  if(code){ $('#joinCode').value=code.toUpperCase().slice(0,5); joinRoom(code); }
+})();
+</script>
+</body>
+</html>
