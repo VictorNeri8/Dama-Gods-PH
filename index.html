@@ -319,6 +319,65 @@ const $ = s => document.querySelector(s);
 const S = { mode:null, myColor:WHITE, role:null, peer:null, conn:null, rematch:{me:false,them:false}, gone:false };
 let G = null;
 
+// Chess-style move sounds, synthesized locally (no audio files required).
+// The same sounds run through commit(), so both online players hear them.
+let pieceAudioContext = null;
+
+function preparePieceAudio(){
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if(!AudioContextClass) return;
+  try{
+    if(!pieceAudioContext) pieceAudioContext = new AudioContextClass();
+    if(pieceAudioContext.state === 'suspended') pieceAudioContext.resume().catch(()=>{});
+  }catch(e){ /* Audio is optional; gameplay must still work. */ }
+}
+
+function playMoveSound(kind='move'){
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if(!AudioContextClass) return;
+  try{
+    if(!pieceAudioContext) pieceAudioContext = new AudioContextClass();
+    const ctx = pieceAudioContext;
+    if(ctx.state === 'suspended') ctx.resume().catch(()=>{});
+    const now = ctx.currentTime;
+    const capture = kind === 'capture';
+    const duration = capture ? 0.105 : 0.075;
+
+    // A short filtered noise transient gives the click a tactile wooden/plastic edge.
+    const length = Math.floor(ctx.sampleRate * (capture ? 0.055 : 0.035));
+    const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i=0;i<length;i++){
+      const fade = 1 - i/length;
+      data[i] = (Math.random()*2-1) * fade * fade;
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(capture ? 1250 : 1850, now);
+    filter.Q.value = 0.8;
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(capture ? 0.0001 : 0.0001, now);
+    noiseGain.gain.exponentialRampToValueAtTime(capture ? 0.12 : 0.075, now + 0.003);
+    noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+    noise.connect(filter); filter.connect(noiseGain); noiseGain.connect(ctx.destination);
+    noise.start(now); noise.stop(now + duration);
+
+    // A low, muted knock underneath makes captures sound slightly heavier.
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(capture ? 245 : 330, now);
+    osc.frequency.exponentialRampToValueAtTime(capture ? 105 : 175, now + duration);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(capture ? 0.20 : 0.13, now + 0.004);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(now); osc.stop(now + duration + 0.01);
+  }catch(e){ /* Sound is optional; gameplay must never depend on it. */ }
+}
+
 function startGame(){
   S.rematch={me:false,them:false};
   S.gone=false;
@@ -376,12 +435,17 @@ function stepTo(to){
 
 function commit(move,remote){
   const mover=G.turn;
+  const movingPiece=G.board[move.from[0]][move.from[1]];
+  const captured=move.steps.some(step=>!!step.cap);
+  const promotes=!!movingPiece && !movingPiece.king &&
+    move.steps[move.steps.length-1].to[0]===(movingPiece.color===WHITE?0:7);
   G.pending=null; G.sel=null;
   applyMove(G.board,move);
   G.last=[move.from,...move.steps.map(s=>s.to)];
   if(!remote && S.mode==='online' && S.conn && S.conn.open){
     S.conn.send({t:'move',from:move.from,tos:move.steps.map(s=>s.to)});
   }
+  playMoveSound(captured ? 'capture' : 'move');
   G.turn=opp(mover);
   G.legal=allMoves(G.board,G.turn);
   if(!G.legal.length){
@@ -522,6 +586,7 @@ function genCode(){
 }
 
 function hostRoom(){
+  preparePieceAudio();
   if(typeof Peer==='undefined'){ lobbyMsg('Could not load PeerJS. Check your internet connection and reload.',true); return; }
   teardown();
   S.mode='online'; S.role='host';
@@ -546,6 +611,7 @@ function hostRoom(){
 }
 
 function joinRoom(code){
+  preparePieceAudio();
   code=(code||'').trim().toUpperCase();
   if(code.length!==5){ lobbyMsg('Enter the 5-letter room code.',true); return; }
   if(typeof Peer==='undefined'){ lobbyMsg('Could not load PeerJS. Check your internet connection and reload.',true); return; }
@@ -631,7 +697,7 @@ $('#btnHost').onclick=hostRoom;
 $('#btnCancelHost').onclick=()=>{ teardown(); lobbyMsg(''); };
 $('#btnJoin').onclick=()=>joinRoom($('#joinCode').value);
 $('#joinCode').addEventListener('keydown',e=>{ if(e.key==='Enter') joinRoom(e.target.value); });
-$('#btnLocal').onclick=()=>{ teardown(); S.mode='local'; S.myColor=WHITE; startGame(); };
+$('#btnLocal').onclick=()=>{ preparePieceAudio(); teardown(); S.mode='local'; S.myColor=WHITE; startGame(); };
 $('#btnNewLocal').onclick=()=>startGame();
 $('#btnLeave').onclick=()=>{
   if(G && !G.over && S.mode==='online' && !confirm('Leave the game? This counts as a loss.')) return;
