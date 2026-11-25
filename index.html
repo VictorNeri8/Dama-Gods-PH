@@ -80,8 +80,18 @@
   }
   .bar.active .dot{background:var(--sun);border-color:var(--sun)}
   .bar .count{color:var(--muted);font-weight:500;font-size:.93rem}
+  .bar .clock{
+    font:700 1.05rem/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-variant-numeric:tabular-nums;
+    min-width:4.4em;text-align:center;padding:6px 10px;border-radius:8px;
+    background:var(--bg);border:1px solid var(--line);color:var(--text);
+  }
+  .bar.active .clock{background:var(--sun);border-color:var(--sun);color:#2a1d00}
+  .bar .clock.low{color:var(--danger);border-color:var(--danger)}
+  .bar.active .clock.low{background:var(--danger);border-color:var(--danger);color:#2a0a05}
 
   .board{
+    position:relative;background:var(--sq-dark);
     display:grid;grid-template-columns:repeat(8,1fr);
     width:min(100%,560px,calc(100vh - 230px));
     min-width:280px;
@@ -94,32 +104,64 @@
     position:relative;display:flex;align-items:center;justify-content:center;
     container-type:size;
   }
-  .cell.l{background-color:var(--sq-light)}
-  .cell.d{background-color:var(--sq-dark)}
-  .cell.last{background-image:linear-gradient(rgba(242,182,50,.38),rgba(242,182,50,.38))}
-  .cell.sel{box-shadow:inset 0 0 0 4px var(--sun)}
+  /* classic dama board: lines are drawn behind the cells, pieces sit on the points */
+  .board .lines{
+    position:absolute;inset:0;width:100%;height:100%;pointer-events:none;
+    fill:none;stroke:var(--sq-light);stroke-width:.045;
+    stroke-linecap:round;stroke-linejoin:round;opacity:.9;
+  }
+  .cell.last::before,.cell.sel::before{
+    content:"";position:absolute;inset:0;border-radius:50%;pointer-events:none;
+  }
+  .cell.last::before{background:rgba(242,182,50,.38)}
+  .cell.sel::before{box-shadow:inset 0 0 0 4px var(--sun)}
   .cell.target{cursor:pointer}
   .cell.target::after{
     content:"";width:30%;height:30%;border-radius:50%;
     background:rgba(242,182,50,.92);
     box-shadow:0 0 0 4px rgba(242,182,50,.28);
   }
+
+  /* bottle-cap pieces: Cocahola (red) and Strike (green); flipped cap = dama */
   .piece{
-    width:80%;height:80%;border-radius:50%;
+    position:relative;z-index:1;
+    width:88%;height:88%;border-radius:50%;
     display:flex;align-items:center;justify-content:center;
-    font-size:46cqw;line-height:1;
+    filter:drop-shadow(0 2px 0 rgba(0,0,0,.55)) drop-shadow(0 4px 4px rgba(0,0,0,.45));
+  }
+  .piece::before{
+    content:"";position:absolute;inset:0;
+    clip-path:polygon(50.00% 0.00%,52.43% 1.26%,54.62% 3.83%,56.74% 5.30%,59.19% 4.52%,62.04% 2.71%,64.74% 2.22%,66.69% 4.14%,68.02% 7.24%,69.61% 9.28%,72.19% 9.25%,75.45% 8.36%,78.17% 8.69%,79.47% 11.10%,79.83% 14.46%,80.74% 16.87%,83.22% 17.60%,86.59% 17.71%,89.09% 18.83%,89.62% 21.51%,88.98% 24.83%,89.14% 27.40%,91.29% 28.83%,94.48% 29.93%,96.54% 31.73%,96.26% 34.46%,94.67% 37.43%,94.07% 39.94%,95.70% 41.94%,98.42% 43.93%,99.86% 46.26%,98.78% 48.78%,96.39% 51.16%,95.07% 53.38%,96.04% 55.77%,98.06% 58.47%,98.75% 61.13%,96.98% 63.22%,93.98% 64.78%,92.08% 66.51%,92.29% 69.08%,93.43% 72.26%,93.30% 75.00%,90.99% 76.48%,87.67% 77.09%,85.34% 78.18%,84.79% 80.70%,84.93% 84.07%,84.01% 86.65%,81.37% 87.38%,78.02% 86.99%,75.46% 87.35%,74.19% 89.59%,73.34% 92.86%,71.69% 95.05%,68.96% 94.97%,65.87% 93.60%,63.32% 93.19%,61.45% 94.97%,59.67% 97.83%,57.45% 99.44%,54.86% 98.56%,52.31% 96.34%,50.00% 95.20%,47.69% 96.34%,45.14% 98.56%,42.55% 99.44%,40.33% 97.83%,38.55% 94.97%,36.68% 93.19%,34.13% 93.60%,31.04% 94.97%,28.31% 95.05%,26.66% 92.86%,25.81% 89.59%,24.54% 87.35%,21.98% 86.99%,18.63% 87.38%,15.99% 86.65%,15.07% 84.07%,15.21% 80.70%,14.66% 78.18%,12.33% 77.09%,9.01% 76.48%,6.70% 75.00%,6.57% 72.26%,7.71% 69.08%,7.92% 66.51%,6.02% 64.78%,3.02% 63.22%,1.25% 61.13%,1.94% 58.47%,3.96% 55.77%,4.93% 53.38%,3.61% 51.16%,1.22% 48.78%,0.14% 46.26%,1.58% 43.93%,4.30% 41.94%,5.93% 39.94%,5.33% 37.43%,3.74% 34.46%,3.46% 31.73%,5.52% 29.93%,8.71% 28.83%,10.86% 27.40%,11.02% 24.83%,10.38% 21.51%,10.91% 18.83%,13.41% 17.71%,16.78% 17.60%,19.26% 16.87%,20.17% 14.46%,20.53% 11.10%,21.83% 8.69%,24.55% 8.36%,27.81% 9.25%,30.39% 9.28%,31.98% 7.24%,33.31% 4.14%,35.26% 2.22%,37.96% 2.71%,40.81% 4.52%,43.26% 5.30%,45.38% 3.83%,47.57% 1.26%);
+    background:
+      radial-gradient(circle at 36% 30%,rgba(255,255,255,.34) 0,rgba(255,255,255,0) 40%),
+      radial-gradient(circle closest-side,var(--face) 0,var(--face-edge) 64%,var(--rimline) 65%,var(--rimline) 69%,transparent 70%),
+      repeating-conic-gradient(var(--t1) 0 8.571deg,var(--t2) 8.571deg 17.143deg);
+  }
+  .piece::after{
+    content:var(--name);position:relative;
+    color:var(--ink);white-space:nowrap;
+    font:italic 800 var(--fs)/1 Georgia,"Times New Roman",serif;
+    letter-spacing:.01em;text-shadow:var(--tshadow);
   }
   .piece.white{
-    background:radial-gradient(circle at 35% 30%,#fff 0,#f3ede1 40%,#c9bda6 100%);
-    box-shadow:0 3px 0 #9d9078,0 5px 8px rgba(0,0,0,.45);
-    color:#a8741a;
+    --name:"Cocahola";--fs:11.5cqw;
+    --t1:#c40812;--t2:#ee1620;--rimline:#8a0710;
+    --face:#f4202b;--face-edge:#cf0a15;
+    --ink:#fff;--ink-dama:#a30f19;--tshadow:0 1px 0 rgba(90,0,8,.7);
   }
   .piece.black{
-    background:radial-gradient(circle at 35% 30%,#5d5650 0,#26211e 45%,#0b0908 100%);
-    box-shadow:0 3px 0 #000,0 5px 8px rgba(0,0,0,.55);
-    color:var(--sun);
+    --name:"Strike";--fs:14cqw;
+    --t1:#00903f;--t2:#00b24f;--rimline:#00612a;
+    --face:#12c25c;--face-edge:#04923f;
+    --ink:#f4ffd0;--ink-dama:#0a6a2c;--tshadow:0 1px 0 rgba(0,50,20,.75);
   }
-  .piece.king::after{content:"♛"}
+  /* flipped cap: bare metal underside with the cork liner showing, team-coloured rim */
+  .piece.king{
+    --name:"DAMA";--fs:14.5cqw;
+    --face:#f6f3ec;--face-edge:#b6b0a2;
+    --ink:var(--ink-dama);--tshadow:0 1px 0 rgba(255,255,255,.8);
+  }
+  .piece.king::after{font-style:normal;font-weight:900;letter-spacing:.06em}
   .piece.dead{opacity:.3}
   .cell.movable{cursor:pointer}
   .cell.movable .piece{outline:3px solid var(--sun);outline-offset:1px}
@@ -143,12 +185,13 @@
 
   <!-- ===================== LOBBY ===================== -->
   <section id="lobby">
-    <h1>Dama</h1>
+    <h1>Dama Gods</h1>
+    <p>by Slardar Mahinay</p>
     <p class="sub">Filipino checkers. Play a friend on another device, no account needed.</p>
 
     <div class="card" id="hostCard">
       <h2>Create a room</h2>
-      <p>You play White and move first. Send your friend the room code or link.</p>
+      <p>You play Cocahola (red) and move first. Send your friend the room code or link.</p>
       <div id="hostIdle"><button id="btnHost">Create room</button></div>
       <div id="hostWait" hidden>
         <div class="code" id="roomCode">-----</div>
@@ -180,22 +223,23 @@
     <details>
       <summary>Rules (Philippine dama)</summary>
       <ul>
-        <li>8×8 board, 12 pieces each, played on the dark squares. White moves first.</li>
+        <li>8×8 board, 12 caps each (red Cocahola vs green Strike), played on the points of the diagonal lines. Cocahola moves first.</li>
         <li>A pawn moves one square diagonally forward.</li>
         <li>A pawn captures by jumping an adjacent enemy piece, <b>forward or backward</b>.</li>
-        <li>A pawn that ends its move on the far row becomes a <b>dama</b> (♛).</li>
+        <li>A pawn that ends its move on the far row becomes a <b>dama</b>: the cap is flipped over and marked DAMA.</li>
         <li>A dama moves like a bishop: any distance along a diagonal. It captures from a distance, jumping one enemy piece and landing on any empty square past it.</li>
         <li>Capturing is <b>compulsory</b>. You may pick any capture, but you must finish the chain of jumps. A piece can't be jumped twice.</li>
         <li>You win when the opponent has no pieces or no legal move.</li>
+        <li>Each player has <b>5 minutes</b> in total. The clock starts when Cocahola picks up the first cap, runs only on the player whose turn it is, and stops when that player finishes the move. Run out of time and you lose.</li>
       </ul>
     </details>
   </section>
 
   <!-- ===================== GAME ===================== -->
   <section id="game" hidden>
-    <div class="bar" id="barTop"><span class="tag"><span class="dot"></span><span class="name"></span></span><span class="count"></span></div>
+    <div class="bar" id="barTop"><span class="tag"><span class="dot"></span><span class="name"></span></span><span class="clock" role="timer" aria-label="Time left">5:00</span><span class="count"></span></div>
     <div class="board" id="board" role="grid" aria-label="Checkers board"></div>
-    <div class="bar" id="barBottom" style="margin-top:8px"><span class="tag"><span class="dot"></span><span class="name"></span></span><span class="count"></span></div>
+    <div class="bar" id="barBottom" style="margin-top:8px"><span class="tag"><span class="dot"></span><span class="name"></span></span><span class="clock" role="timer" aria-label="Time left">5:00</span><span class="count"></span></div>
     <div class="status" id="status" role="status" aria-live="polite"></div>
     <div class="controls">
       <button id="btnResign" class="ghost">Resign</button>
@@ -318,13 +362,15 @@ function applyMove(b,move){
 const $ = s => document.querySelector(s);
 const S = { mode:null, myColor:WHITE, role:null, peer:null, conn:null, rematch:{me:false,them:false}, gone:false };
 let G = null;
+const CLOCK_MS = 5*60*1000;   // time bank per player
 
 function startGame(){
   S.rematch={me:false,them:false};
   S.gone=false;
   G={
     board:initialBoard(), turn:WHITE, over:false, result:null,
-    last:[], pending:null, sel:null, legal:[]
+    last:[], pending:null, sel:null, legal:[],
+    clock:{ ms:{white:CLOCK_MS,black:CLOCK_MS}, started:false, ref:0 }
   };
   G.legal=allMoves(G.board,G.turn);
   showScreen('game');
@@ -352,7 +398,7 @@ function onCell(r,c){
   if(targets().some(t=>eq(t,[r,c]))){ stepTo([r,c]); return; }
   if(G.pending) return;                       // must finish the chain
   const p=G.board[r][c];
-  if(p && p.color===G.turn && G.legal.some(m=>eq(m.from,[r,c]))) G.sel=[r,c];
+  if(p && p.color===G.turn && G.legal.some(m=>eq(m.from,[r,c]))){ G.sel=[r,c]; clockArm(true); }
   else G.sel=null;
   render();
 }
@@ -374,15 +420,18 @@ function stepTo(to){
   commit(rest[0],false);
 }
 
-function commit(move,remote){
+function commit(move,remote,ms){
   const mover=G.turn;
+  clockArm(false); clockSync();                       // charge the mover for this turn
+  if(remote && Number.isFinite(ms)) G.clock.ms[mover]=Math.min(ms,CLOCK_MS);   // mover's own device is authoritative
   G.pending=null; G.sel=null;
   applyMove(G.board,move);
   G.last=[move.from,...move.steps.map(s=>s.to)];
   if(!remote && S.mode==='online' && S.conn && S.conn.open){
-    S.conn.send({t:'move',from:move.from,tos:move.steps.map(s=>s.to)});
+    S.conn.send({t:'move',from:move.from,tos:move.steps.map(s=>s.to),ms:Math.round(G.clock.ms[mover])});
   }
   G.turn=opp(mover);
+  G.clock.ref=Date.now();                             // opponent's clock starts now
   G.legal=allMoves(G.board,G.turn);
   if(!G.legal.length){
     G.over=true;
@@ -411,7 +460,23 @@ function viewBoard(){
   return {b,dead};
 }
 
-const label = c => c===WHITE ? 'White' : 'Black';
+/* classic dama board lines: every diagonal through the playable points + outer frame */
+const BOARD_SVG=(function(){
+  let d='';
+  const seg=(r0,c0,r1,c1)=>{ if(r1>r0) d+='M'+(c0+.5)+' '+(r0+.5)+'L'+(c1+.5)+' '+(r1+.5); };
+  for(let k=-7;k<=7;k+=2){            // r-c = k
+    const r0=Math.max(0,k), r1=Math.min(7,7+k);
+    seg(r0,r0-k,r1,r1-k);
+  }
+  for(let s=1;s<=13;s+=2){            // r+c = s
+    const r0=Math.max(0,s-7), r1=Math.min(7,s);
+    seg(r0,s-r0,r1,s-r1);
+  }
+  return '<svg class="lines" viewBox="0 0 8 8" preserveAspectRatio="none" aria-hidden="true">'
+       + '<rect x=".5" y=".5" width="7" height="7"/><path d="'+d+'"/></svg>';
+})();
+
+const label = c => c===WHITE ? 'You' : 'Friend';
 
 function render(){
   if(!G) return;
@@ -421,7 +486,7 @@ function render(){
   const mustCapture = G.legal.length>0 && !!G.legal[0].steps[0].cap;
   const movable = (myTurn() && !G.pending) ? G.legal.map(m=>m.from) : [];
   const boardEl=$('#board');
-  boardEl.innerHTML='';
+  boardEl.innerHTML=BOARD_SVG;
   for(let dr=0;dr<8;dr++) for(let dc=0;dc<8;dc++){
     const r=flip?7-dr:dr, c=flip?7-dc:dc;
     const cell=document.createElement('div');
@@ -454,6 +519,7 @@ function render(){
   };
   fill($('#barTop'),topColor);
   fill($('#barBottom'),bottomColor);
+  updateClocks();
 
   // status
   const st=$('#status');
@@ -488,6 +554,58 @@ $('#board').addEventListener('click',e=>{
   const cell=e.target.closest('.cell');
   if(cell) onCell(+cell.dataset.r,+cell.dataset.c);
 });
+
+/* =====================================================================
+   CLOCKS  (5 minutes per player; only the player to move is charged)
+   ===================================================================== */
+function clockArm(announce){
+  if(!G || G.over || G.clock.started) return;
+  G.clock.started=true; G.clock.ref=Date.now();
+  if(announce && S.mode==='online' && S.conn && S.conn.open) S.conn.send({t:'clockstart'});
+}
+function clockSync(){
+  if(!G || G.over || !G.clock.started) return;
+  const now=Date.now();
+  G.clock.ms[G.turn]-=now-G.clock.ref;
+  G.clock.ref=now;
+}
+function fmtClock(ms){
+  const s=Math.ceil(Math.max(0,ms)/1000);
+  return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+}
+function updateClocks(){
+  if(!G) return;
+  clockSync();
+  const bottom=(S.mode==='online') ? S.myColor : WHITE, top=opp(bottom);
+  const set=(sel,col)=>{
+    const el=document.querySelector(sel+' .clock'); if(!el) return;
+    const ms=G.clock.ms[col];
+    el.textContent=fmtClock(ms);
+    el.classList.toggle('low', ms<30000);
+  };
+  set('#barTop',top); set('#barBottom',bottom);
+}
+function flagTimeout(col){
+  if(!G || G.over) return;
+  G.over=true; G.pending=null; G.sel=null;
+  const reason = S.mode==='online'
+    ? (col===S.myColor ? 'you ran out of time' : 'your friend ran out of time')
+    : label(col)+' ran out of time';
+  G.result={winner:opp(col), reason};
+  render();
+}
+setInterval(()=>{
+  if(!G || G.over || !G.clock.started) return;
+  clockSync();
+  const t=G.turn, ms=G.clock.ms[t];
+  const theirs = S.mode==='online' && t!==S.myColor;
+  if(!theirs && ms<=0){                       // the player on the clock decides
+    if(S.mode==='online' && S.conn && S.conn.open) S.conn.send({t:'timeout'});
+    flagTimeout(t); return;
+  }
+  if(theirs && ms<=-3000){ flagTimeout(t); return; }   // fallback if their message never arrives
+  updateClocks();
+},200);
 
 /* =====================================================================
    SCREENS / LOBBY
@@ -604,9 +722,16 @@ function onData(d){
       if(!Array.isArray(d.from)||!Array.isArray(d.tos)) return;
       const m=findMove(d.from,d.tos);
       if(!m){ $('#status').textContent='Received an illegal move – boards are out of sync.'; return; }
-      commit(m,true);
+      commit(m,true,d.ms);
       break;
     }
+    case 'clockstart':
+      clockArm(false);
+      break;
+    case 'timeout':
+      if(!G||G.over) return;
+      flagTimeout(opp(S.myColor));            // the sender ran out of time
+      break;
     case 'resign':
       if(!G||G.over) return;
       G.over=true; G.result={winner:S.myColor,reason:'your friend resigned'};
