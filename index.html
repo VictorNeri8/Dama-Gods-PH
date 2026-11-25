@@ -185,7 +185,8 @@
 
   <!-- ===================== LOBBY ===================== -->
   <section id="lobby">
-    <h1>Dama</h1>
+    <h1>Dama Gods</h1>
+    <p>by Slardar Mahinay</p>
     <p class="sub">Filipino checkers. Play a friend on another device, no account needed.</p>
 
     <div class="card" id="hostCard">
@@ -475,7 +476,7 @@ const BOARD_SVG=(function(){
        + '<rect x=".5" y=".5" width="7" height="7"/><path d="'+d+'"/></svg>';
 })();
 
-const label = c => c===WHITE ? 'Cocahola' : 'Strike';
+const label = c => c===WHITE ? 'You' : 'Friend';
 
 function render(){
   if(!G) return;
